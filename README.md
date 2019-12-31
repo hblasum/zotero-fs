@@ -7,3 +7,5 @@ the daemon package.
 
 To mount, call './zotero-fs'. The file system will be mounted at '/tmp/zotero'.
 To unmount, call 'sudo umount /tmp/zotero'.
+
+License: LGPL v2.1 (same as Perl Fuse module).

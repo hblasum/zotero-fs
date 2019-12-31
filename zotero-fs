@@ -1,0 +1,31 @@
+#!/usr/bin/perl
+
+# zotero 5.x query
+use strict;
+use Proc::Daemon;
+
+# get base name of file, including dereferencing of symlink, if needed
+use File::Basename;
+my $dir_name = dirname(__FILE__);
+if ( -l __FILE__) { $dir_name = dirname(readlink(__FILE__)) };
+
+# mount local copy of database to tempary file system
+
+if ( ! ( -e "/tmp/zotero")) {
+	`mkdir /tmp/zotero`;
+}
+
+# start daemon
+
+my $cmd = "perl -I $dir_name $dir_name/zotero-fuse/zotero-fuse.pl /tmp/zotero";
+
+my $daemon = Proc::Daemon->new(
+                   work_dir     => '/tmp',
+                   child_STDOUT => '/tmp/zotero-fs-output.txt',
+                   child_STDERR => '/tmp/zotero-fs-debug.txt',
+                   pid_file     => 'zotero-fs-pid.txt',
+                   exec_command => $cmd,
+);
+my $pid = $daemon->Init;
+
+print "mounted to /tmp/zotero (daemon PID: $pid)\n"; 

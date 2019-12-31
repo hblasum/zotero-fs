@@ -30,8 +30,10 @@ sub init {
 	}
 
 	$dbh = DBI->connect("dbi:SQLite:dbname=/tmp/zotero.sqlite",  undef, undef, { sqlite_open_flags => SQLITE_OPEN_READONLY, sqlite_use_immediate_transaction => 1, }) or die "$DBI::errstr";
-
+	return $dbh;
 }
+
+# subcollections in collection
 
 sub folderdir { 
 	my ($a2, $itemid) = @_;
@@ -43,6 +45,19 @@ sub folderdir {
     	$$a2{$$file[0]} = $$file[1];
 	}
 } 
+
+# files in collection 
+
+sub folderfiles { 
+	my ($a2, $itemid) = @_;
+	my $query = $itemid ? "='$itemid'" : "is null";
+	my $array = $dbh->selectall_arrayref("
+	select itemID, collectionID from collectionItems where CollectionId $query");
+    for my $file (@$array) {
+    	$$a2{$$file[0]} = -1;
+	}
+} 
+
 
 sub parent {
 

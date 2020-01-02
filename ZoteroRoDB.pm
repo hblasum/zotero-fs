@@ -26,38 +26,50 @@ sub init {
 
 	
 	if ( ! ( -e "/tmp/zotero.sqlite")) {
-    	`cp /$1/zotero/zotero.sqlite /tmp`;
+    	`cp /$1/zotero.sqlite /tmp`;
 	}
 
 	$dbh = DBI->connect("dbi:SQLite:dbname=/tmp/zotero.sqlite",  undef, undef, { sqlite_open_flags => SQLITE_OPEN_READONLY, sqlite_use_immediate_transaction => 1, }) or die "$DBI::errstr";
 	return $dbh;
 }
 
-# subcollections in collection
+# subcollections in collection, reset $result
 
 sub folderdir { 
-	my ($a2, $itemid) = @_;
+	my ($result, $itemid) = @_;
 	my $query = $itemid ? "='$itemid'" : "is null";
 	my $array = $dbh->selectall_arrayref("
 	select collectionName, collectionID from collections where parentCollectionId $query");
-	%$a2 = ();
+	%$result = ();
     for my $file (@$array) {
-    	$$a2{$$file[0]} = $$file[1];
+    	$$result{$$file[0]} = $$file[1];
 	}
 } 
 
-# files in collection 
+# files in collection, do not reset $result
 
 sub folderfiles { 
-	my ($a2, $itemid) = @_;
+	my ($result, $itemid) = @_;
 	my $query = $itemid ? "='$itemid'" : "is null";
 	my $array = $dbh->selectall_arrayref("
 	select itemID, collectionID from collectionItems where CollectionId $query");
     for my $file (@$array) {
-    	$$a2{$$file[0]} = -1;
+    	$$result{$$file[0]} = "P$$file[0]";
 	}
 } 
 
+# files in publication, reset $result
+
+sub publicationfiles { 
+	my ($result, $itemid) = @_;
+	$itemid =~ s/^P//;
+	%$result = ();
+	my $array = $dbh->selectall_arrayref("
+	select itemID, path from itemAttachments where parentItemID = '$itemid'");
+    for my $file (@$array) {
+    	$$result{$$file[0]} = "$$file[1]";
+	}
+} 
 
 sub parent {
 
@@ -71,5 +83,6 @@ sub parent {
 		parent ($dbh, $$meta[0], $counter++, $result); 
 	}
 }
+
 
 1;

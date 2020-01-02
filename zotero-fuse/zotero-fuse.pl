@@ -8,6 +8,8 @@ use ZoteroRoDB;
 use Data::Dumper;
 use DBI;
 
+$| = 1;
+
 my $curid;
 my %files;
 my $curdirname;
@@ -25,11 +27,12 @@ sub curid_root {
 	%files = ();
 	my %curfolder;
 	ZoteroRoDB::folderdir(\%curfolder, $curid);
+	ZoteroRoDB::folderfiles(\%curfolder, $curid);
 	$files{'.'} = {
 			cont => $curid,
 			type => 0040,
 			mode => 0755,
-			ctime => time()-1000
+			ctime => time()
 	};
 	
 	for my $file (sort keys %curfolder) {
@@ -38,7 +41,7 @@ sub curid_root {
 			cont => $curfolder{$file},
 			type => 0040,
 			mode => 0755,
-			ctime => time()-1000
+			ctime => time()
 		}
 	}
 }
@@ -46,17 +49,29 @@ sub curid_root {
 sub curid_dir {
 
 	my ($curid) = @_;
+	my $type; my $mode;
 	print "curid_dir($curdirname)($curid)\n";	
 	my @files = ('.');
 	my %curfolder;
-	ZoteroRoDB::folderdir(\%curfolder, $curid);
+	# is folder 
+	if ($curid =~ /^\d/) {
+			ZoteroRoDB::folderdir(\%curfolder, $curid);
+			ZoteroRoDB::folderfiles(\%curfolder, $curid);
+			$type = 0040; # folder
+			$mode = 555;
+	# is publication 
+	} elsif ($curid =~ /^P/) {
+			ZoteroRoDB::publicationfiles(\%curfolder, $curid);
+			$type = 0100; # file 
+			$mode = 444;
+	}
 	for my $file (sort keys %curfolder) {
 		print "injecting $file\n";
 		$files{"$curdirname/$file"} = {
 			cont => $curfolder{$file},
-			type => 0040,
-			mode => 0755,
-			ctime => time()-1000
+			type => $type,
+			mode => $mode,
+			ctime => time()
 		};
 		push @files, $file;
 	}
@@ -76,8 +91,6 @@ sub filename_fixup {
 
 sub e_getattr {
 	my ($file) = filename_fixup(shift);
-	#$curid = exists($files{$file}{cont}) ? $files{$file}{cont} : 0; 
-	#print "e_getattr($file)($curid)\n";
 	$file =~ s,^/,,;
 	$file = '.' unless length($file);
 	return -ENOENT() unless exists($files{$file});
@@ -87,9 +100,6 @@ sub e_getattr {
 	my ($dev, $ino, $rdev, $blocks, $gid, $uid, $nlink, $blksize) = (0,0,0,1,0,0,1,1024);
 	my ($atime, $ctime, $mtime);
 	$atime = $ctime = $mtime = $files{$file}{ctime};
-	# 2 possible types of return values:
-	#return -ENOENT(); # or any other error you care to
-	#print(join(",",($dev,$ino,$modes,$nlink,$uid,$gid,$rdev,$size,$atime,$mtime,$ctime,$blksize,$blocks)),"\n");
 	return ($dev,$ino,$modes,$nlink,$uid,$gid,$rdev,$size,$atime,$mtime,$ctime,$blksize,$blocks);
 }
 

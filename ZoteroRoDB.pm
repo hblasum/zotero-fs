@@ -60,22 +60,31 @@ sub folderfiles {
 	my $array = $dbh->selectall_arrayref("
 	select collectionItems.itemID, key, collectionID from collectionItems left outer join items where CollectionId $query and items.ItemID = collectionItems.itemID");
     for my $file (@$array) {
-    	$$result{$$file[0]} = "P$$file[0]P$$file[1]";
+    	$$result{$$file[0]} = "P$$file[0]";
 	}
 } 
 
 # files in publication, reset $result
+# only storage:, not links 
 
 sub publicationfiles { 
 	my ($result, $itemid) = @_;
-	$itemid =~ /^P(\d*)P(.*)$/;
-	## second info maybe not really needed 
+	$itemid =~ /^P(.*)$/;
 	%$result = ();
+	## may fail
 	my $array = $dbh->selectall_arrayref("
 	select itemAttachments.itemID, items.key, path from itemAttachments left outer join items where itemAttachments.parentItemID = '$1' and itemAttachments.itemid = items.itemid");
     for my $file (@$array) {
-    	$$result{$$file[2]} = "F$$file[1]F$$file[2]";
+		if (defined($$file[2])) { # list of attachments is not empty
+			print "(ATTACH:$$file[2])\n";
+			if ($$file[2] =~ /^storage:/) {	
+				$$file[2] =~ s/^storage://; # chop off storage prefix
+			}	
+			# '-' encodes that file has not been e_opened before
+    		$$result{$$file[2]} = "F-$$file[1]F$$file[2]";	
+		}
 	}
+	
 } 
 
 sub parent {

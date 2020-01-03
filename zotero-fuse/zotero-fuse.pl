@@ -123,16 +123,26 @@ sub e_open {
 	return -EISDIR() if $files{$file}{type} & 0040;
 
 	my $pointer = $files{$file}{cont}; 
-	if ($pointer =~ /^F(.{8})F(.*)$/) {
-		print "(POINTER:$pointer)\n";
-		$pointer =~ /^F(.{8})F(.*)$/;
+	# file has not been opened before, hence we read in the file 
+	# 	content from the file system
+	if ($pointer =~ /^F(-?.{8})F(.*)$/) {
+		$pointer =~ /^F(-?.{8})F(.*)$/;
 		my $source_folder = $1;
 		my $source_filename = $2;
-		$source_filename =~ s/^storage://;
+		print "(POINTER:$pointer($source_folder|$source_filename))\n";
+		if ($source_folder =~ /^-/) {
+			$source_folder =~ s/^-//;
 	
-		my $path = ZoteroRoDB::location() . "/storage/$source_folder/$source_filename";
-		print "Reading content for \$files{$file}{cont} from $path\n";
-		$files{$file}{cont} = read_file("$path");
+			my $path = ZoteroRoDB::location() . "/storage/$source_folder/$source_filename";
+			print "Reading content for \$files{$file}{cont} from $path\n";
+			if (!-e $path) {
+				# this check may be triggered if there are paths in 
+				# zotero DB that are outdated (e.g. files got lost)
+				print "Zoterofs reading error: $path does not exist\n"; 
+			} else { 
+				$files{$file}{cont} = read_file("$path");
+			}
+		}
 	} 
     my $fh = [ rand() ];
     

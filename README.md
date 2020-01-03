@@ -1,5 +1,5 @@
 zotero-fuse: FUSE implementation of Zotero FS
-Mounts read-only fise 
+Mounts read-only file systesm.
 
 To install, first install Perl user space FUSE file system and 
 the daemon package.
@@ -7,5 +7,11 @@ the daemon package.
 
 To mount, call './zotero-fs'. The file system will be mounted at '/tmp/zotero'.
 To unmount, call 'sudo umount /tmp/zotero'.
+
+Limitations:
+	* tested only on Linux 
+	* files are read-only 
+	* only local storage prefixed "storage:" (no cloud, no links)
+	* only one local profile 
 
 License: LGPL v2.1 (same as Perl Fuse module).

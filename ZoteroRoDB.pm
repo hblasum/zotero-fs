@@ -7,6 +7,9 @@
 # .tables
 # .schema mytable
 
+# NB: instead of raw SQL invocations it would 
+# be better to use Zotero API
+
 
 use strict;
 package ZoteroRoDB;
@@ -58,25 +61,42 @@ sub folderfiles {
 	my ($result, $itemid) = @_;
 	my $query = $itemid ? "='$itemid'" : "is null";
 	my $array = $dbh->selectall_arrayref("
-	select collectionItems.itemID, creators.lastName, itemdatavalues.value 
-	from collectionItems 
+	select items.ItemId, creators.lastName, itemData.fieldID, 
+		itemDataValues.value
+	from collectionItems
 	left outer join items 
 	left outer join itemCreators left outer join creators 
-	left outer join itemdatavalues left outer join itemdata 
+	left outer join itemDataValues left outer join itemData 
 	where CollectionId $query and items.ItemID = collectionItems.itemID 
-	and items.ItemID = itemCreators.itemID and 
-	itemCreators.creatorID = creators.creatorID and 
-	itemCreators.orderIndex = 0
-	and itemdata.itemID = items.ItemID
-	and itemdatavalues.valueID = itemdata.valueID
-	and itemdata.fieldID = 14");	
-	my $year = "";
+	and items.ItemID = itemCreators.itemID 
+	and itemCreators.creatorID = creators.creatorID
+	and itemCreators.orderIndex = 0
+	and itemData.itemID = items.ItemID
+	and itemDataValues.valueID = itemData.valueID
+	and (itemData.fieldID = 14 or itemData.fieldID = 110)
+	order by items.ItemID");	
+	my $year;
+	my $title;
     for my $file (@$array) {
-		if (defined($$file[2])) {
-			$year = $$file[2];	
-			$year = "-" . substr($year, 0, 4);
-		}
-    	$$result{"~$$file[0]-$$file[1]$year"} = "P$$file[0]";
+		my $id = $$file[0]; #zotero item ID
+		my $creator = $$file[1]; 
+		$creator =~ s/[^A-Za-z0-9]//g;
+		if (defined($$file[2])) {	
+			if ($$file[2] == "14") { #comes first
+				$year = substr($$file[3], 0, 4);
+				$year =~ s/[^A-Za-z0-9]//g;
+				$title = "";
+			}
+			if ($$file[2] == "110") { #comes second
+				if (!defined($year)) {
+					$year = ""; 
+				}
+				$title = substr($$file[3], 0, 20);
+				$title =~ s/ /-/g;
+				$title =~ s/[^A-Za-z0-9-]//g;
+    			$$result{"ZZ-$creator-$year-$title-$id"} = "P$id";
+			}
+		} 
 	}
 } 
 
@@ -95,9 +115,9 @@ sub publicationfiles {
 			print "(ATTACH:$$file[2])\n";
 			if ($$file[2] =~ /^storage:/) {	
 				$$file[2] =~ s/^storage://; # chop off storage prefix
+				# '-' encodes that file has not been e_opened before
+    			$$result{$$file[2]} = "F-$$file[1]F$$file[2]";	
 			}	
-			# '-' encodes that file has not been e_opened before
-    		$$result{$$file[2]} = "F-$$file[1]F$$file[2]";	
 		}
 	}
 	

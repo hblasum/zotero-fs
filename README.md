@@ -13,5 +13,6 @@ Limitations:
 	* files are read-only 
 	* only local storage prefixed "storage:" (no cloud, no links)
 	* only one local profile 
+	* output of publication directories is only ASCII, other UTF-8 is filtered
 
 License: LGPL v2.1 (same as Perl Fuse module).

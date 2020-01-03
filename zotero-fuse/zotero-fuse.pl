@@ -131,9 +131,10 @@ sub e_open {
 		my $source_filename = $2;
 		print "(POINTER:$pointer($source_folder|$source_filename))\n";
 		if ($source_folder =~ /^-/) {
-			$source_folder =~ s/^-//;
+			my $new_source_folder = $source_folder;
+			$new_source_folder =~ s/^-//;
 	
-			my $path = ZoteroRoDB::location() . "/storage/$source_folder/$source_filename";
+			my $path = ZoteroRoDB::location() . "/storage/$new_source_folder/$source_filename";
 			print "Reading content for \$files{$file}{cont} from $path\n";
 			if (!-e $path) {
 				# this check may be triggered if there are paths in 
@@ -141,6 +142,7 @@ sub e_open {
 				print "Zoterofs reading error: $path does not exist\n"; 
 			} else { 
 				$files{$file}{cont} = read_file("$path");
+				$source_folder = $new_source_folder;
 			}
 		}
 	} 

@@ -7,6 +7,7 @@ use strict;
 use ZoteroRoDB;
 use Data::Dumper;
 use DBI;
+use File::Slurp;
 
 $| = 1;
 
@@ -58,12 +59,12 @@ sub curid_dir {
 			ZoteroRoDB::folderdir(\%curfolder, $curid);
 			ZoteroRoDB::folderfiles(\%curfolder, $curid);
 			$type = 0040; # folder
-			$mode = 555;
+			$mode = 0555;
 	# is publication 
 	} elsif ($curid =~ /^P/) {
 			ZoteroRoDB::publicationfiles(\%curfolder, $curid);
 			$type = 0100; # file 
-			$mode = 444;
+			$mode = 0444;
 	}
 	for my $file (sort keys %curfolder) {
 		print "injecting $file\n";
@@ -120,7 +121,19 @@ sub e_open {
     print("e_open called $file, $flags, $fileinfo\n");
 	return -ENOENT() unless exists($files{$file});
 	return -EISDIR() if $files{$file}{type} & 0040;
-    
+
+	my $pointer = $files{$file}{cont}; 
+	if ($pointer =~ /^F(.{8})F(.*)$/) {
+		print "(POINTER:$pointer)\n";
+		$pointer =~ /^F(.{8})F(.*)$/;
+		my $source_folder = $1;
+		my $source_filename = $2;
+		$source_filename =~ s/^storage://;
+	
+		my $path = ZoteroRoDB::location() . "/storage/$source_folder/$source_filename";
+		print "Reading content for \$files{$file}{cont} from $path\n";
+		$files{$file}{cont} = read_file("$path");
+	} 
     my $fh = [ rand() ];
     
     print("open ok (handle $fh)\n");

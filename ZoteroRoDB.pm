@@ -14,8 +14,9 @@ use DBI;
 use DBD::SQLite::Constants qw/:file_open/;
 
 my $dbh;
+my $location;
 
-sub init {
+sub location { 
 
 	# get path of zotero database
 	my $profile_name = `grep Path ~/.zotero/zotero/profiles.ini`;
@@ -23,7 +24,12 @@ sub init {
 	$profile_name =~ /Path=(.*)/;
 	my $zotero_sql_path = `grep 'extensions.zotero.dataDir' ~/.zotero/zotero/$1/prefs.js`;
 	$zotero_sql_path =~ /user_pref\("extensions\.zotero\.dataDir", "(.*)"\)/;
+	return $1;
+}
 
+sub init {
+
+	my $zotero_sql_path = location();
 	
 	if ( ! ( -e "/tmp/zotero.sqlite")) {
     	`cp /$1/zotero.sqlite /tmp`;
@@ -52,9 +58,9 @@ sub folderfiles {
 	my ($result, $itemid) = @_;
 	my $query = $itemid ? "='$itemid'" : "is null";
 	my $array = $dbh->selectall_arrayref("
-	select itemID, collectionID from collectionItems where CollectionId $query");
+	select collectionItems.itemID, key, collectionID from collectionItems left outer join items where CollectionId $query and items.ItemID = collectionItems.itemID");
     for my $file (@$array) {
-    	$$result{$$file[0]} = "P$$file[0]";
+    	$$result{$$file[0]} = "P$$file[0]P$$file[1]";
 	}
 } 
 
@@ -62,12 +68,13 @@ sub folderfiles {
 
 sub publicationfiles { 
 	my ($result, $itemid) = @_;
-	$itemid =~ s/^P//;
+	$itemid =~ /^P(\d*)P(.*)$/;
+	## second info maybe not really needed 
 	%$result = ();
 	my $array = $dbh->selectall_arrayref("
-	select itemID, path from itemAttachments where parentItemID = '$itemid'");
+	select itemAttachments.itemID, items.key, path from itemAttachments left outer join items where itemAttachments.parentItemID = '$1' and itemAttachments.itemid = items.itemid");
     for my $file (@$array) {
-    	$$result{$$file[0]} = "$$file[1]";
+    	$$result{$$file[2]} = "F$$file[1]F$$file[2]";
 	}
 } 
 

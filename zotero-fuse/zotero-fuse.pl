@@ -32,7 +32,7 @@ sub curid_root {
 	$files{'.'} = {
 			cont => $curid,
 			type => 0040,
-			mode => 0755,
+			mode => 0555,
 			ctime => time()
 	};
 	
@@ -41,7 +41,7 @@ sub curid_root {
 		$files{$file} = {
 			cont => $curfolder{$file},
 			type => 0040,
-			mode => 0755,
+			mode => 0555,
 			ctime => time()
 		}
 	}

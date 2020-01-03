@@ -58,9 +58,25 @@ sub folderfiles {
 	my ($result, $itemid) = @_;
 	my $query = $itemid ? "='$itemid'" : "is null";
 	my $array = $dbh->selectall_arrayref("
-	select collectionItems.itemID, key, collectionID from collectionItems left outer join items where CollectionId $query and items.ItemID = collectionItems.itemID");
+	select collectionItems.itemID, creators.lastName, itemdatavalues.value 
+	from collectionItems 
+	left outer join items 
+	left outer join itemCreators left outer join creators 
+	left outer join itemdatavalues left outer join itemdata 
+	where CollectionId $query and items.ItemID = collectionItems.itemID 
+	and items.ItemID = itemCreators.itemID and 
+	itemCreators.creatorID = creators.creatorID and 
+	itemCreators.orderIndex = 0
+	and itemdata.itemID = items.ItemID
+	and itemdatavalues.valueID = itemdata.valueID
+	and itemdata.fieldID = 14");	
+	my $year = "";
     for my $file (@$array) {
-    	$$result{$$file[0]} = "P$$file[0]";
+		if (defined($$file[2])) {
+			$year = $$file[2];	
+			$year = "-" . substr($year, 0, 4);
+		}
+    	$$result{"~$$file[0]-$$file[1]$year"} = "P$$file[0]";
 	}
 } 
 

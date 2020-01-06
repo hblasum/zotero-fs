@@ -35,7 +35,7 @@ sub init {
 	my $zotero_sql_path = location();
 	
 	if ( ! ( -e "/tmp/zotero.sqlite")) {
-    	`cp /$1/zotero.sqlite /tmp`;
+    	`cp $zotero_sql_path/zotero.sqlite /tmp`;
 	}
 
 	$dbh = DBI->connect("dbi:SQLite:dbname=/tmp/zotero.sqlite",  undef, undef, { sqlite_open_flags => SQLITE_OPEN_READONLY, sqlite_use_immediate_transaction => 1, }) or die "$DBI::errstr";

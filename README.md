@@ -1,10 +1,11 @@
-zotero-fs: FUSE implementation of Zotero FS
-===========================================
+zotero-fs: file system interface to local Zotero database
+=========================================================
 
 Zotero is a reference manager tool (https://www.zotero.org/).
 
 This program copies of a zotero.sqlite database to /tmp and mounts 
-that copy as read-only file system. 
+that copy as read-only file system. It uses the FUSE user-space
+file system.
 
 Technical readiness level: proof-of-concept.
 

@@ -27,8 +27,8 @@ sub curid_root {
 	print "curid_root($curid)\n";	
 	%files = ();
 	my %curfolder;
-	ZoteroRoDB::folderdir(\%curfolder, $curid);
-	ZoteroRoDB::folderfiles(\%curfolder, $curid);
+	ZoteroRoDB::collection_collections(\%curfolder, $curid);
+	ZoteroRoDB::collection_items(\%curfolder, $curid);
 	$files{'.'} = {
 			cont => $curid,
 			type => 0040,
@@ -45,6 +45,19 @@ sub curid_root {
 			ctime => time()
 		}
 	}
+	
+	ZoteroRoDB::collection_files(\%curfolder, $curid);
+
+	for my $file (sort keys %curfolder) {
+		print "injecting $file\n";
+		$files{$file} = {
+			cont => $curfolder{$file},
+			type => 0040,
+			mode => 0555,
+			ctime => time()
+		}
+	}
+	
 }
 
 sub curid_dir {
@@ -56,13 +69,13 @@ sub curid_dir {
 	my %curfolder;
 	# is folder 
 	if ($curid =~ /^\d/) {
-			ZoteroRoDB::folderdir(\%curfolder, $curid);
-			ZoteroRoDB::folderfiles(\%curfolder, $curid);
+			ZoteroRoDB::collection_collections(\%curfolder, $curid);
+			ZoteroRoDB::collection_items(\%curfolder, $curid);
 			$type = 0040; # folder
 			$mode = 0555;
 	# is publication 
 	} elsif ($curid =~ /^P/) {
-			ZoteroRoDB::publicationfiles(\%curfolder, $curid);
+			ZoteroRoDB::item_files(\%curfolder, $curid);
 			$type = 0100; # file 
 			$mode = 0444;
 	}
@@ -75,6 +88,20 @@ sub curid_dir {
 			ctime => time()
 		};
 		push @files, $file;
+	}
+	if ($curid =~ /^\d/) {
+		ZoteroRoDB::collection_files(\%curfolder, $curid);
+		for my $file (sort keys %curfolder) {
+			print "injecting $file\n";
+			$files{"$curdirname/$file"} = {
+				cont => $curfolder{$file},
+				type => 0100,
+				mode => 0444,
+				ctime => time()
+		};
+		push @files, $file;
+	}
+	
 	}
 	return (@files, 0);
 }

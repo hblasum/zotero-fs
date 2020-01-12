@@ -70,5 +70,6 @@ Implementation/hacking
 	* alternatively, ZoteroRoDB.pm could be written to operate on 
 		some Zotero API rather than the direct database
 
-License: LGPL v2.1 (same as Perl Fuse module).
+License: LGPL v2.1 (same as Perl Fuse module) or Affero GPL 3 
+	(same as Zotero) or Creative Commons Zero (CC0), at your choice.
 Contact: holger-r-zotero-fs@blasum.net (Holger)

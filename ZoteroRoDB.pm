@@ -44,7 +44,7 @@ sub init {
 
 # subcollections in collection, reset $result
 
-sub folderdir { 
+sub collection_collections { 
 	my ($result, $itemid) = @_;
 	my $query = $itemid ? "='$itemid'" : "is null";
 	my $array = $dbh->selectall_arrayref("
@@ -55,9 +55,9 @@ sub folderdir {
 	}
 } 
 
-# files in collection, do not reset $result
+# items in collection, do not reset $result
 
-sub folderfiles { 
+sub collection_items { 
 	my ($result, $itemid) = @_;
 	my $query = $itemid ? "='$itemid'" : "is null";
 	my $array = $dbh->selectall_arrayref("
@@ -77,15 +77,31 @@ sub folderfiles {
 	order by items.ItemID");	
 	my $year;
 	my $title;
+	# if data base entry data is complete: two rows where first row is 
+	# 	itemData.field = 14 [year] and second row itemData.field = 110 
+	# 	[title]
+	# if data base entry is does not have title or does not have year: one 
+	# 	row with either 14 or 110 is given
+	# case with entry neither having title or year is not handled
+	my $lastfield; # catch entries without title
+	my $lastcreator; # catch entries without title
+	my $lastid; # catch entries without title
     for my $file (@$array) {
 		my $id = $$file[0]; #zotero item ID
 		my $creator = $$file[1]; 
 		$creator =~ s/[^A-Za-z0-9]//g;
-		if (defined($$file[2])) {	
+		if (defined($$file[2])) {
 			if ($$file[2] == "14") { #comes first
+				if ($lastfield == 14) { # previous result did not have title, 
+					# so dump it first
+    				$$result{"ZZ-$lastcreator-$year-$lastid"} = "P$id";
+				}
 				$year = substr($$file[3], 0, 4);
 				$year =~ s/[^A-Za-z0-9]//g;
 				$title = "";
+				$lastfield = 14;
+				$lastid = $id;
+				$lastcreator = $creator;
 			}
 			if ($$file[2] == "110") { #comes second
 				if (!defined($year)) {
@@ -94,16 +110,45 @@ sub folderfiles {
 				$title = substr($$file[3], 0, 20);
 				$title =~ s/ /-/g;
 				$title =~ s/[^A-Za-z0-9-]//g;
+				$lastfield = 110;
     			$$result{"ZZ-$creator-$year-$title-$id"} = "P$id";
 			}
 		} 
 	}
 } 
 
+# raw files in collection
+
+sub collection_files { 
+	my ($result, $itemid) = @_;
+	%$result = ();
+	my $query = $itemid ? "='$itemid'" : "is null";
+	my $array = $dbh->selectall_arrayref("
+	select items.ItemId, items.key, itemAttachments.path
+	from collectionItems
+	left outer join items 
+	left outer join itemAttachments
+	where CollectionId $query and items.ItemID = collectionItems.itemID 
+	and items.itemID = itemAttachments.itemID 
+	order by items.ItemID");
+    for my $file (@$array) {
+		print "HBLD ($$file[0]|$$file[1]|$$file[2])";
+		if (defined($$file[2])) { # list of attachments is not empty
+			print "(ATTACH:$$file[2])\n";
+			if ($$file[2] =~ /^storage:/) {	
+				$$file[2] =~ s/^storage://; # chop off storage prefix
+				# '-' encodes that file has not been e_opened before
+    			$$result{$$file[2]} = "F-$$file[1]F$$file[2]";	
+			}	
+		}
+	}
+}
+
+
 # files in publication, reset $result
 # only storage:, not links 
 
-sub publicationfiles { 
+sub item_files { 
 	my ($result, $itemid) = @_;
 	$itemid =~ /^P(.*)$/;
 	%$result = ();

@@ -31,3 +31,6 @@ my $daemon = Proc::Daemon->new(
 my $pid = $daemon->Init;
 
 print "mounted to /tmp/zotero (daemon PID: $pid)\n"; 
+
+# Uncomment for auto-initialization, but may take some time
+# system("sleep 0.1; cd /tmp/zotero && find -type d 2>&1 >/dev/null");

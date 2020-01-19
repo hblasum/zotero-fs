@@ -13,7 +13,10 @@ Use cases
 =========
 
 	* analyze/browse a Zotero collection hierarchy with file system tools
-	* symlink often-used files directly into your file system
+	* symlink often-used files/collections directly into your file system 
+		(if you want instant access, after remount, run "find" from 
+		/tmp/zotero; for automatizing this, incomment last line from 
+		zotero-fs/zotero-fs)
 
 Limitations
 ===========
@@ -63,7 +66,7 @@ Implementation/hacking
 ======================
 
 	* zotero-fs is based on the fuse user file system implementation
-		and the Perl Fuse module
+		and the Perl Fuse module.
 	* ZoteroRoDB.pm operates on the zotero database ("model");
 		zotero-fuse/zotero-fuse.pl ("view") creates a virtual file 
 		system based on fuse; zotero-fs is just a start script for 
@@ -73,8 +76,10 @@ Implementation/hacking
 		pass file content of collections / publication entries 
 		to zotero-fuse.pl. 
 	* alternatively, ZoteroRoDB.pm could be written to operate on 
-		some Zotero API rather than the direct database
+		some Zotero API rather than the direct database.
 
 License: LGPL v2.1 (same as Perl Fuse module) or Affero GPL 3 
 	(same as Zotero) or Creative Commons Zero (CC0), at your choice.
-Contact: holger-r-zotero-fs@blasum.net (Holger)
+Contact: holger-r-zotero-fs@blasum.net (Holger).
+The idea of "virtual drive for the storage folder", including use of
+FUSE, has been discussed before: e.g. https://forums.zotero.org/discussion/6474/zotero-for-document-management 

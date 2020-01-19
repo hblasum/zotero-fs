@@ -3,7 +3,7 @@ zotero-fs: file system interface to local Zotero database
 
 Zotero is a reference manager tool (https://www.zotero.org/).
 
-This program copies of a zotero.sqlite database to /tmp and mounts 
+This program copies a zotero.sqlite database to /tmp and mounts 
 that copy as read-only file system. It uses the FUSE user-space
 file system.
 
@@ -41,9 +41,11 @@ Features
 Installation
 ============
 	
-	* To install, first install Perl user space FUSE file system and 
-		the daemon package.
-		"# sudo apt-get install libfuse-perl libproc-daemon-perl libdbd-sqlite3-perl libfile-slurp-perl git".
+	* To install, first install Perl user space FUSE file system, the  
+		daemon package, SQLite3 interface, Slurp module for handling
+		complete files, (if not already installed) git. At least in 
+		Debian, all this is pre-packaged as follows.
+		"sudo apt-get install libfuse-perl libproc-daemon-perl libdbd-sqlite3-perl libfile-slurp-perl git"
 	* git clone https://github.com/hblasum/zotero-fs
 	* zotero-fs/zotero-fs
 	* ls /tmp/zotero # collection hierarchy should be visible

@@ -3,10 +3,11 @@
 # zotero 5.x query
 use strict;
 use Proc::Daemon;
+use Cwd;
 
 # get base name of file, including dereferencing of symlink, if needed
 use File::Basename;
-my $dir_name = dirname(__FILE__);
+my $dir_name = Cwd::abs_path(dirname(__FILE__));
 if ( -l __FILE__) { $dir_name = dirname(readlink(__FILE__)) };
 
 # mount local copy of database to tempary file system

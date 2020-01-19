@@ -43,8 +43,10 @@ Installation
 	
 	* To install, first install Perl user space FUSE file system and 
 		the daemon package.
-		"sudo apt-get install libfuse-perl libproc-daemon-perl".
-	* git-clone files into directory of your choice
+		"# sudo apt-get install libfuse-perl libproc-daemon-perl libdbd-sqlite3-perl libfile-slurp-perl git".
+	* git clone https://github.com/hblasum/zotero-fs
+	* zotero-fs/zotero-fs
+	* ls /tmp/zotero # collection hierarchy should be visible
 	* debugging/logging output in /tmp/zotero-fs-debug.txt and 
 		/tmp/zotero-fs-output.txt
 

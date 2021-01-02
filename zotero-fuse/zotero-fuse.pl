@@ -37,7 +37,7 @@ sub curid_root {
 	};
 	
 	for my $file (sort keys %curfolder) {
-		print "injecting $file\n";
+		print "injecting1 $file\n";
 		$files{$file} = {
 			cont => $curfolder{$file},
 			type => 0040,
@@ -49,7 +49,7 @@ sub curid_root {
 	ZoteroRoDB::collection_files(\%curfolder, $curid);
 
 	for my $file (sort keys %curfolder) {
-		print "injecting $file\n";
+		print "injecting2 $file\n";
 		$files{$file} = {
 			cont => $curfolder{$file},
 			type => 0040,
@@ -67,6 +67,8 @@ sub curid_dir {
 	print "curid_dir($curdirname)($curid)\n";	
 	my @files = ('.');
 	my %curfolder;
+
+			
 	# is folder 
 	if ($curid =~ /^\d/) {
 			ZoteroRoDB::collection_collections(\%curfolder, $curid);
@@ -80,19 +82,38 @@ sub curid_dir {
 			$mode = 0444;
 	}
 	for my $file (sort keys %curfolder) {
-		print "injecting $file\n";
-		$files{"$curdirname/$file"} = {
-			cont => $curfolder{$file},
-			type => $type,
-			mode => $mode,
-			ctime => time()
+		my $shortfile = $file;
+		print "injecting3 $file\n";
+		if ($file =~ /.*\/(.*)/) {
+			# is coming from absolute path
+			$shortfile = $1;
+			print "injecting3abs $shortfile\n";
+			$files{"$curdirname/$shortfile"} = {
+				cont => $curfolder{$file},
+				type => $type,
+				mode => $mode,
+				ctime => time()
+			}
+		} else {
+			# is coming from storage
+			print "injecting3storage $shortfile\n";
+			$files{"$curdirname/$shortfile"} = {
+				cont => $curfolder{$file},
+				type => $type,
+				mode => $mode,
+				ctime => time()
+			}
 		};
-		push @files, $file;
+
+		#if ($file =~ /^A-.*\/(.*)$/) {
+		#	$file = $1;
+		#}
+		push @files, $shortfile;
 	}
 	if ($curid =~ /^\d/) {
 		ZoteroRoDB::collection_files(\%curfolder, $curid);
 		for my $file (sort keys %curfolder) {
-			print "injecting $file\n";
+			print "injecting4 $file\n";
 			$files{"$curdirname/$file"} = {
 				cont => $curfolder{$file},
 				type => 0100,
@@ -148,11 +169,11 @@ sub e_open {
     print("e_open called $file, $flags, $fileinfo\n");
 	return -ENOENT() unless exists($files{$file});
 	return -EISDIR() if $files{$file}{type} & 0040;
-
 	my $pointer = $files{$file}{cont}; 
 	# file has not been opened before, hence we read in the file 
 	# 	content from the file system
 	if ($pointer =~ /^F(-?.{8})F(.*)$/) {
+		print ("pointer (F) $pointer");
 		$pointer =~ /^F(-?.{8})F(.*)$/;
 		my $source_folder = $1;
 		my $source_filename = $2;
@@ -172,7 +193,23 @@ sub e_open {
 				$source_folder = $new_source_folder;
 			}
 		}
+	}
+	# absolute pointer
+	if ($pointer =~ /^A-(.*)$/) {
+		print ("pointer (A) $pointer");
+		my $path = $1;
+		print "(POINTER:$pointer($path))\n";
+		print "Reading content for \$files{$file}{cont} from $path\n";
+		if (!-e $path) {
+			# this check may be triggered if there are paths in 
+			# zotero DB that are outdated (e.g. files got lost)
+			print "Zoterofs reading error: $path does not exist\n"; 
+		} else { 
+			$files{$file}{cont} = read_file("$path");
+		}
+	
 	} 
+	
     my $fh = [ rand() ];
     
     print("open ok (handle $fh)\n");
@@ -187,11 +224,13 @@ sub e_read {
     print "e_read from $file, $buf \@ $off\n";
     print "file handle:\n", Dumper($fh);
 	return -ENOENT() unless exists($files{$file});
+    	print "e_read file: $files{$file}\n";
 	if(!exists($files{$file}{cont})) {
 		return -EINVAL() if $off > 0;
 		my $context = fuse_get_context();
 		return sprintf("pid=0x%08x uid=0x%08x gid=0x%08x\n",@$context{'pid','uid','gid'});
 	}
+    	print "e_read cont: $files{$file}{cont}\n";
 	return -EINVAL() if $off > length($files{$file}{cont});
 	return 0 if $off == length($files{$file}{cont});
 	return substr($files{$file}{cont},$off,$buf);

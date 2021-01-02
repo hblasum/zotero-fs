@@ -18,6 +18,8 @@ use DBD::SQLite::Constants qw/:file_open/;
 
 my $dbh;
 my $location;
+my $field_title;
+my $field_date;
 
 sub location { 
 
@@ -33,12 +35,16 @@ sub location {
 sub init {
 
 	my $zotero_sql_path = location();
-	
+
 	if ( ! ( -e "/tmp/zotero.sqlite")) {
     	`cp $zotero_sql_path/zotero.sqlite /tmp`;
 	}
 
 	$dbh = DBI->connect("dbi:SQLite:dbname=/tmp/zotero.sqlite",  undef, undef, { sqlite_open_flags => SQLITE_OPEN_READONLY, sqlite_use_immediate_transaction => 1, }) or die "$DBI::errstr";
+	my $array = $dbh->selectall_arrayref("select fieldId from fields where fieldName = 'title'");
+	$field_title = $array->[0][0];
+	$array = $dbh->selectall_arrayref("select fieldId from fields where fieldName = 'date'");
+	$field_date = $array->[0][0];
 	return $dbh;
 }
 
@@ -73,13 +79,12 @@ sub collection_items {
 	and itemCreators.orderIndex = 0
 	and itemData.itemID = items.ItemID
 	and itemDataValues.valueID = itemData.valueID
-	and (itemData.fieldID = 14 or itemData.fieldID = 110)
+	and (itemData.fieldID = $field_title or itemData.fieldID = $field_date)
 	order by items.ItemID");	
 	my $year;
 	my $title;
 	# if data base entry data is complete: two rows where first row is 
-	# 	itemData.field = 14 [year] and second row itemData.field = 110 
-	# 	[title]
+	# 	itemData.field = "year" and second row itemData.field = "title" 
 	# if data base entry is does not have title or does not have year: one 
 	# 	row with either 14 or 110 is given
 	# case with entry neither having title or year is not handled
@@ -91,26 +96,26 @@ sub collection_items {
 		my $creator = $$file[1]; 
 		$creator =~ s/[^A-Za-z0-9]//g;
 		if (defined($$file[2])) {
-			if ($$file[2] == "14") { #comes first
-				if ($lastfield == 14) { # previous result did not have title, 
+			if ($$file[2] == $field_date) { #title comes first
+				if ($lastfield == $field_date) { # previous result did not have title, 
 					# so dump it first
     				$$result{"ZZ-$lastcreator-$year-$lastid"} = "P$id";
 				}
 				$year = substr($$file[3], 0, 4);
 				$year =~ s/[^A-Za-z0-9]//g;
 				$title = "";
-				$lastfield = 14;
+				$lastfield = $field_date;
 				$lastid = $id;
 				$lastcreator = $creator;
 			}
-			if ($$file[2] == "110") { #comes second
+			if ($$file[2] == $field_title) { #title comes second
 				if (!defined($year)) {
 					$year = ""; 
 				}
 				$title = substr($$file[3], 0, 20);
 				$title =~ s/ /-/g;
 				$title =~ s/[^A-Za-z0-9-]//g;
-				$lastfield = 110;
+				$lastfield = $field_title;
     			$$result{"ZZ-$creator-$year-$title-$id"} = "P$id";
 			}
 		} 
@@ -118,6 +123,16 @@ sub collection_items {
 } 
 
 # raw files in collection
+
+sub attachment_path {
+	my ($dir, $attachment) = @_;
+	if ($attachment =~ /^storage:/) {	
+		$attachment =~ s/^storage://; # chop off storage prefix
+    		return "F-${dir}F${attachment}";	
+	} else {
+    		return "A-${attachment}";	
+	}
+}
 
 sub collection_files { 
 	my ($result, $itemid) = @_;
@@ -131,15 +146,17 @@ sub collection_files {
 	where CollectionId $query and items.ItemID = collectionItems.itemID 
 	and items.itemID = itemAttachments.itemID 
 	order by items.ItemID");
+	print "COLL($query)\n";	
     for my $file (@$array) {
-		print "HBLD ($$file[0]|$$file[1]|$$file[2])";
+		print "COLL-FILE ($$file[0]|$$file[1]|$$file[2])";
 		if (defined($$file[2])) { # list of attachments is not empty
-			print "(ATTACH:$$file[2])\n";
+			my $ap = attachment_path($$file[1], $$file[2]);
+			print "(ATTACH:$$file[2](ap:$ap))\n";
 			if ($$file[2] =~ /^storage:/) {	
 				$$file[2] =~ s/^storage://; # chop off storage prefix
-				# '-' encodes that file has not been e_opened before
-    			$$result{$$file[2]} = "F-$$file[1]F$$file[2]";	
-			}	
+			} 
+			# '-' encodes that file has not been e_opened before
+    			$$result{$$file[2]} = $ap;	
 		}
 	}
 }
@@ -157,12 +174,12 @@ sub item_files {
 	select itemAttachments.itemID, items.key, path from itemAttachments left outer join items where itemAttachments.parentItemID = '$1' and itemAttachments.itemid = items.itemid");
     for my $file (@$array) {
 		if (defined($$file[2])) { # list of attachments is not empty
-			print "(ATTACH:$$file[2])\n";
+			my $ap = attachment_path($$file[1], $$file[2]);
+			print "(ATTACH:$$file[2](ap:$ap))\n";
 			if ($$file[2] =~ /^storage:/) {	
 				$$file[2] =~ s/^storage://; # chop off storage prefix
-				# '-' encodes that file has not been e_opened before
-    			$$result{$$file[2]} = "F-$$file[1]F$$file[2]";	
-			}	
+			}
+    			$$result{$$file[2]} = $ap;
 		}
 	}
 	
